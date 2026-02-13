@@ -1,0 +1,11 @@
+.worktrees/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+dist/
+build/
+*.tmp
+*.wav
+*.mp3
+*.m4a
