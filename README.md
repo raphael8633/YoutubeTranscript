@@ -7,14 +7,14 @@ Works even when the video has no captions — falls back to local Whisper transc
 
 ```bash
 # requires: Python 3.12+, uv
-uv sync
-python main.py <youtube-url>
+uv sync                            # installs dependencies + package (editable)
+uv run python main.py <youtube-url>
 ```
 
 **Options:**
 
 ```
-python main.py <url> [--timestamps] [--output FILE] [--lang CODE] [--model MODEL]
+uv run python main.py <url> [--timestamps] [--output FILE] [--lang CODE] [--model MODEL]
 
   --timestamps     prefix each line with [MM:SS]
   --output FILE    override output filename  (default: video title)
@@ -25,7 +25,7 @@ python main.py <url> [--timestamps] [--output FILE] [--lang CODE] [--model MODEL
 **Example:**
 
 ```bash
-python main.py "https://youtube.com/watch?v=dQw4w9WgXcQ" --timestamps --model medium
+uv run python main.py "https://youtube.com/watch?v=dQw4w9WgXcQ" --timestamps --model medium
 # saves: Rick Astley - Never Gonna Give You Up.txt
 ```
 
