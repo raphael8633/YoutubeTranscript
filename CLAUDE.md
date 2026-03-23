@@ -1,25 +1,32 @@
-# CLAUDE.md — HARD CONSTRAINTS
+# CLAUDE.md — PROJECT RULES
 
-## Priority (conflict → higher wins; tie → ask user)
+## Entry Point
 
-1. User explicit instructions
-2. Superpowers skills & this file
-3. Other documents
+`/raph-core` is enforced via raph-power plugin hook (UserPromptSubmit) — no manual reminder needed.
 
-## Rules
+## Quick Commands
 
-**0. Session Start** — Before ANY action (including skill invocation), read `MISTAKES.md` and load all listed mistakes into active context. Rule violation → STOP + ask. New uncovered error → STOP, summarize 1–2 bullets, ask if new rule. No auto-logging.
+- **test:** `unset VIRTUAL_ENV && uv run pytest`
+- **lint:** (none configured)
+- **dev:** `unset VIRTUAL_ENV && uv run python main.py <url>`
 
-**1. Superpowers** — Always use matching skill; never reimplement it yourself.
+## Project Context
 
-**2. Git** — Rebase only: always `git pull --rebase`, never plain pull.
+<!-- Semantic hints that Glob/Grep cannot discover -->
+- `pipeline.py` is the stable public API — a future web layer would call `pipeline.run()` directly
+- `main.py` is a thin wrapper that calls `cli.main()`; entry point logic lives in `cli.py`
+- `faster-whisper` downloads model weights on first use (~150 MB for `base`) — tests mock this
+- All tests use mocks; no integration tests hit YouTube or Whisper
 
-**3. TDD** — All code changes need tests that actually run (not comments).
+## Project-Specific Overrides
 
-**4. Verification** — Never mark complete or claim features exist without code verification (`superpowers:verification-before-completion`).
+- **Git:** Rebase only — always `git pull --rebase`, never plain pull
+- **Finishing:** When using `superpowers:finishing-a-development-branch`, execute Option 1 (merge locally to master) directly — do not present options or ask
+- **uv:** Before any `uv run` command, run `unset VIRTUAL_ENV` if set — avoids environment path mismatch warning
 
-**5. Shell (Windows)** — Bash tool = Git Bash (MSYS/MINGW64), not CMD/PS. Always use Unix-style paths: Windows drives map as `/c/`, `/d/`, etc. (e.g. `/d/dev/project`). Bash tool CWD does not persist between calls — chain commands with `&&` instead of `cd` + separate call. Windows-only ops: `cmd.exe /c "..."`. PS1 scripts: `powershell.exe -ExecutionPolicy Bypass -File x.ps1`. Forbidden: CMD's `cd /d` drive-switch flag, `dir` command, backslash paths (`D:\foo`). **uv**: before any `uv run` command, run `unset VIRTUAL_ENV` if `VIRTUAL_ENV` is set — avoids the "does not match project environment path" warning.
+## Notes
 
-**6. Plans** — Active only in `docs/plans/`. Completed → move to `docs/plans/archive/` using `git mv` (never native `mv`). Never read archive during planning.
-
-**7. Finishing** — When using `superpowers:finishing-a-development-branch`, do NOT present options or ask — execute Option 1 (merge locally to master) directly and immediately, unless the user has explicitly said otherwise beforehand.
+- raph-power plugin supersedes superpowers — only raph-power is enabled in `settings.json`
+- raph-power provides: task classification (S0-S3), TDD, verification, review gates, git discipline, debugging, subagent delegation, mistake tracking
+- This file should only contain project-specific rules and quick commands
+- MISTAKES.md is maintained per-project with entries specific to this codebase

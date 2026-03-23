@@ -1,17 +1,4 @@
 {
-  "hooks": {
-    "PreToolUse": [
-      {
-        "matcher": "Bash",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "bash -c \"cat MISTAKES.md 2>/dev/null || true\""
-          }
-        ]
-      }
-    ]
-  },
   "permissions": {
     "allow": [
       "Bash(git add:*)",
@@ -38,10 +25,12 @@
       "Bash(gh cache:*)",
       "Bash(ls:*)",
       "Bash(echo:*)",
-      "Bash(grep:*)"
+      "Bash(grep:*)",
+      "Bash(mkdir:*)",
+      "Bash(unset VIRTUAL_ENV:*)"
     ]
   },
   "enabledPlugins": {
-    "superpowers@superpowers-marketplace": true
+    "raph-power@raph-power-marketplace": true
   }
 }
