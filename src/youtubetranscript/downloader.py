@@ -24,6 +24,9 @@ def download(url: str, tmp_dir: str) -> str:
         "noplaylist": True,
         "postprocessors": [],
     }
+    cookie_path = os.environ.get("YT_COOKIES")
+    if cookie_path:
+        opts["cookiefile"] = cookie_path
     with yt_dlp.YoutubeDL(opts) as ydl:
         info = ydl.extract_info(url, download=True)
 

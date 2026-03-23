@@ -1,5 +1,7 @@
 """Fetch video metadata (title, id) via yt-dlp."""
 
+import os
+
 import yt_dlp
 
 
@@ -17,6 +19,9 @@ def fetch(url: str) -> dict:
         "skip_download": True,
         "noplaylist": True,
     }
+    cookie_path = os.environ.get("YT_COOKIES")
+    if cookie_path:
+        opts["cookiefile"] = cookie_path
     with yt_dlp.YoutubeDL(opts) as ydl:
         info = ydl.extract_info(url, download=False)
     return {"title": info["title"], "video_id": info["id"]}

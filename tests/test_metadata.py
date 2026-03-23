@@ -28,3 +28,31 @@ def test_fetch_raises_on_extraction_failure(mock_ydl_cls):
     mock_ydl_cls.return_value = ydl
     with pytest.raises(Exception, match="network error"):
         fetch("https://youtube.com/watch?v=bad")
+
+
+@patch("youtubetranscript.metadata.yt_dlp.YoutubeDL")
+def test_fetch_uses_cookiefile_from_env(mock_ydl_cls, monkeypatch):
+    """When YT_COOKIES is set, yt-dlp opts should include cookiefile."""
+    monkeypatch.setenv("YT_COOKIES", "/tmp/cookies.txt")
+    mock_ydl_cls.return_value = _make_ydl(
+        {"title": "Test", "id": "abc123"}
+    )
+
+    fetch("https://youtube.com/watch?v=abc123")
+
+    call_opts = mock_ydl_cls.call_args[0][0]
+    assert call_opts["cookiefile"] == "/tmp/cookies.txt"
+
+
+@patch("youtubetranscript.metadata.yt_dlp.YoutubeDL")
+def test_fetch_no_cookiefile_without_env(mock_ydl_cls, monkeypatch):
+    """When YT_COOKIES is not set, cookiefile should not appear in opts."""
+    monkeypatch.delenv("YT_COOKIES", raising=False)
+    mock_ydl_cls.return_value = _make_ydl(
+        {"title": "Test", "id": "abc123"}
+    )
+
+    fetch("https://youtube.com/watch?v=abc123")
+
+    call_opts = mock_ydl_cls.call_args[0][0]
+    assert "cookiefile" not in call_opts
