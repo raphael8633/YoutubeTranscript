@@ -29,6 +29,21 @@ uv run python main.py "https://youtube.com/watch?v=dQw4w9WgXcQ" --timestamps --m
 # saves: Rick Astley - Never Gonna Give You Up.txt
 ```
 
+## YouTube authentication
+
+YouTube may block downloads with a bot-detection challenge. To fix this, set the `YT_COOKIES` environment variable pointing to a Netscape-format cookies file:
+
+```bash
+export YT_COOKIES=~/cookies.txt          # add to .bashrc / .zshrc for persistence
+uv run python main.py <url>
+```
+
+To export cookies from your browser, use a browser extension like [Get cookies.txt LOCALLY](https://chromewebstore.google.com/detail/get-cookiestxt-locally/cclelndahbckbenkjhflpdbgdldlbecc) or the `yt-dlp --cookies-from-browser` command.
+
+> **JS runtime:** yt-dlp works best with [deno](https://deno.land) installed (`curl -fsSL https://deno.land/install.sh | sh`).
+
+> **Cloud servers:** Running on AWS/GCP/Azure introduces additional YouTube restrictions. See [docs/cloud-ip-troubleshooting.md](docs/cloud-ip-troubleshooting.md) for known issues and workarounds.
+
 ## New device setup
 
 ```bash
@@ -59,7 +74,7 @@ src/youtubetranscript/
   writer.py       # save formatted string to .txt file
   cli.py          # argparse entry point
 main.py           # calls cli.main()
-tests/            # 27 unit tests, all modules mocked
+tests/            # unit tests, all modules mocked
 ```
 
 **Pipeline flow:**
@@ -86,7 +101,7 @@ pipeline.run(url, timestamps, output, lang, model)
 ## Tests
 
 ```bash
-uv run pytest          # run all 27 tests
+uv run pytest          # run all tests
 uv run pytest -v       # verbose
 ```
 
