@@ -29,4 +29,4 @@
 - raph-power plugin supersedes superpowers — only raph-power is enabled in `settings.json`
 - raph-power provides: task classification (S0-S3), TDD, verification, review gates, git discipline, debugging, subagent delegation, mistake tracking
 - This file should only contain project-specific rules and quick commands
-- MISTAKES.md is maintained per-project with entries specific to this codebase
+- `.mistakes/` registry (raph-mistakes CLI; `raph-mistakes capture` to add, `check` to scan) is maintained per-project with entries specific to this codebase

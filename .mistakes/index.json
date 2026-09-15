@@ -1,0 +1,25 @@
+{
+  "version": 1,
+  "entries": [
+    {
+      "id": "M-001",
+      "title": "Git worktree cleanup order",
+      "severity": "soft",
+      "triggers": {
+        "keywords": [
+          "git worktree remove",
+          "git branch -d fails",
+          "branch checked out in worktree"
+        ],
+        "commands": [
+          "git worktree remove <path>",
+          "git branch -d <branch>"
+        ]
+      },
+      "guard": {
+        "command": "Always remove the worktree BEFORE deleting the branch — git worktree remove <path>, then git branch -d <branch>."
+      },
+      "path": "M-001-git-worktree-cleanup-order.md"
+    }
+  ]
+}
