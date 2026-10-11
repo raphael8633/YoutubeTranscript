@@ -56,3 +56,41 @@ def test_fetch_no_cookiefile_without_env(mock_ydl_cls, monkeypatch):
 
     call_opts = mock_ydl_cls.call_args[0][0]
     assert "cookiefile" not in call_opts
+
+
+# --- URL parsing / oEmbed (no yt-dlp; works from blocked cloud IPs) --------
+
+from youtubetranscript.metadata import parse_video_id, fetch_oembed_title
+
+
+@pytest.mark.parametrize("url", [
+    "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+    "https://youtube.com/watch?feature=share&v=dQw4w9WgXcQ&t=10",
+    "https://m.youtube.com/watch?v=dQw4w9WgXcQ",
+    "https://youtu.be/dQw4w9WgXcQ?si=xyz",
+    "https://www.youtube.com/shorts/dQw4w9WgXcQ",
+    "https://www.youtube.com/embed/dQw4w9WgXcQ",
+    "https://www.youtube.com/live/dQw4w9WgXcQ?feature=share",
+    "dQw4w9WgXcQ",
+])
+def test_parse_video_id(url):
+    assert parse_video_id(url) == "dQw4w9WgXcQ"
+
+
+def test_parse_video_id_rejects_garbage():
+    with pytest.raises(ValueError):
+        parse_video_id("https://example.com/not-youtube")
+
+
+@patch("youtubetranscript.metadata._get_json")
+def test_fetch_oembed_title(mock_get):
+    mock_get.return_value = {"title": "Rick Roll", "author_name": "Rick"}
+    assert fetch_oembed_title("dQw4w9WgXcQ") == "Rick Roll"
+    assert "youtube.com/oembed" in mock_get.call_args[0][0]
+    assert "dQw4w9WgXcQ" in mock_get.call_args[0][0]
+
+
+@patch("youtubetranscript.metadata._get_json")
+def test_fetch_oembed_title_falls_back_to_video_id(mock_get):
+    mock_get.side_effect = OSError("HTTP 401")
+    assert fetch_oembed_title("dQw4w9WgXcQ") == "dQw4w9WgXcQ"

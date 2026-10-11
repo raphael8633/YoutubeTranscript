@@ -83,3 +83,81 @@ def test_pipeline_cleans_up_temp_dir_on_failure():
         with pytest.raises(RuntimeError):
             pipeline.run(URL)
         mock_rmtree.assert_called_once_with("/tmp/ytdl_test", ignore_errors=True)
+
+
+# --- backend selection -----------------------------------------------------
+
+GEMINI_SEGS = [{"text": "From Gemini", "start": 0.0}]
+CANONICAL = "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
+
+
+def _gemini_patches():
+    return [
+        patch("youtubetranscript.pipeline.gemini.transcribe", return_value=GEMINI_SEGS),
+        patch("youtubetranscript.pipeline.metadata.fetch_oembed_title", return_value="OEmbed Title"),
+    ]
+
+
+def test_backend_gemini_skips_local_path():
+    patches = _patch_all()
+    g_tr, g_title = _gemini_patches()
+    with patches[0] as mock_meta, patches[1] as mock_caps, patches[2], patches[3], \
+         patches[4] as mock_fmt, patches[5] as mock_wr, patches[6], patches[7], patches[8], \
+         g_tr as mock_gem, g_title:
+        pipeline.run(URL, backend="gemini", lang="en", gemini_model="m1")
+        mock_meta.assert_not_called()
+        mock_caps.assert_not_called()
+        mock_gem.assert_called_once_with(CANONICAL, lang="en", model="m1")
+        mock_fmt.assert_called_once_with(GEMINI_SEGS, False)
+        mock_wr.assert_called_once_with("Hello", "OEmbed Title")
+
+
+def test_backend_auto_falls_back_to_gemini_when_local_blocked(monkeypatch):
+    monkeypatch.setenv("GEMINI_API_KEY", "k")
+    patches = _patch_all()
+    g_tr, g_title = _gemini_patches()
+    with patches[0] as mock_meta, patches[1], patches[2], patches[3], \
+         patches[4] as mock_fmt, patches[5], patches[6], patches[7], patches[8], \
+         g_tr as mock_gem, g_title:
+        mock_meta.side_effect = Exception("Sign in to confirm you're not a bot")
+        pipeline.run(URL)
+        mock_gem.assert_called_once()
+        mock_fmt.assert_called_once_with(GEMINI_SEGS, False)
+
+
+def test_backend_auto_reraises_local_error_without_gemini_key(monkeypatch):
+    monkeypatch.delenv("GEMINI_API_KEY", raising=False)
+    patches = _patch_all()
+    g_tr, g_title = _gemini_patches()
+    with patches[0] as mock_meta, patches[1], patches[2], patches[3], \
+         patches[4], patches[5], patches[6], patches[7], patches[8], \
+         g_tr as mock_gem, g_title:
+        mock_meta.side_effect = Exception("Sign in to confirm you're not a bot")
+        with pytest.raises(Exception, match="not a bot"):
+            pipeline.run(URL)
+        mock_gem.assert_not_called()
+
+
+def test_backend_auto_prefers_local_captions(monkeypatch):
+    monkeypatch.setenv("GEMINI_API_KEY", "k")
+    patches = _patch_all(caps=SEGMENTS)
+    g_tr, g_title = _gemini_patches()
+    with patches[0], patches[1], patches[2], patches[3], \
+         patches[4] as mock_fmt, patches[5], patches[6], patches[7], patches[8], \
+         g_tr as mock_gem, g_title:
+        pipeline.run(URL)
+        mock_gem.assert_not_called()
+        mock_fmt.assert_called_once_with(SEGMENTS, False)
+
+
+def test_backend_local_never_uses_gemini(monkeypatch):
+    monkeypatch.setenv("GEMINI_API_KEY", "k")
+    patches = _patch_all()
+    g_tr, g_title = _gemini_patches()
+    with patches[0] as mock_meta, patches[1], patches[2], patches[3], \
+         patches[4], patches[5], patches[6], patches[7], patches[8], \
+         g_tr as mock_gem, g_title:
+        mock_meta.side_effect = Exception("blocked")
+        with pytest.raises(Exception, match="blocked"):
+            pipeline.run(URL, backend="local")
+        mock_gem.assert_not_called()

@@ -9,18 +9,32 @@ def fetch(video_id: str, lang: str | None) -> list[dict] | None:
 
     Args:
         video_id: YouTube video ID (not the full URL).
-        lang: BCP-47 language code (e.g. ``"en"``, ``"es"``).  Defaults to
-              ``"en"`` when ``None``.
+        lang: BCP-47 language code (e.g. ``"en"``, ``"es"``).  When ``None``,
+              the first available transcript is used (manual before
+              auto-generated), whatever its language.
 
     Returns:
         List of ``{"text": str, "start": float}`` dicts, or ``None`` if no
-        captions are available.
+        matching captions are available.
+
+    Raises:
+        Exception: request errors such as ``RequestBlocked`` / ``IpBlocked``
+            propagate so the caller can switch backends.
     """
-    language = lang or "en"
     api = YouTubeTranscriptApi()
     try:
-        transcript = api.fetch(video_id, languages=[language])
-    except (NoTranscriptFound, TranscriptsDisabled):
+        transcripts = api.list(video_id)
+    except TranscriptsDisabled:
         return None
 
-    return [{"text": snip.text, "start": snip.start} for snip in transcript]
+    if lang:
+        try:
+            transcript = transcripts.find_transcript([lang])
+        except NoTranscriptFound:
+            return None
+    else:
+        transcript = next(iter(transcripts), None)
+        if transcript is None:
+            return None
+
+    return [{"text": snip.text, "start": snip.start} for snip in transcript.fetch()]

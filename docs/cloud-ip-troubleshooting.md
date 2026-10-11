@@ -1,6 +1,8 @@
 # Cloud IP Troubleshooting
 
-在雲端伺服器（AWS / GCP / Azure 等）執行時，YouTube 會對雲端 IP 施加額外限制。本文件記錄已知問題與除錯路徑。
+在雲端伺服器（OVH、DigitalOcean、AWS / GCP / Azure 等）執行時，YouTube 會封鎖 datacenter IP。本文件記錄已知問題與除錯路徑。
+
+**建議做法：** 雲端上用 `--backend gemini`（需 `GEMINI_API_KEY`）。Gemini 由 Google 端抓影片轉錄，不經本機 IP，有無字幕都適用；`auto` 模式在本地路徑失敗時也會自動改走 Gemini。
 
 ## 問題總覽
 
@@ -11,6 +13,7 @@
 | 3 | n challenge 失敗：`found 0 n function possibilities` | YouTube 對雲端 IP 回傳 TV player JS（`tv-player-ias.js`），該版本不含標準 n function | **未解決** |
 | 4 | `youtube-transcript-api` IP 封鎖：`RequestBlocked` | 雲端 IP 被完全封鎖，cookies 無法繞過 | **未解決** |
 | 5 | 字幕下載 429：`HTTP Error 429: Too Many Requests` | 短時間內請求過多觸發 rate limit | 部分解決 — 需等待冷卻 |
+| 6 | 無 cookies 時 PO token 也無法通過 bot 偵測 | bot 偵測發生在 player request 階段，早於 PO token 介入 | 繞道 — `--backend gemini` |
 
 ## 問題 1：Bot 偵測（已解決）
 
@@ -64,10 +67,14 @@ WARNING: [youtube] [jsc] Error solving n challenge request using "deno" provider
 | `--extractor-args "youtube:player_skip=js"` | `The page needs to be reloaded` 錯誤 |
 | 安裝 `curl_cffi` + `--impersonate chrome` | 無法繞過 TV player 問題 |
 
-**可能的解決方向（未驗證）：**
-- 使用住宅 IP 代理（residential proxy）
-- PO Token 方案（參考 [yt-dlp PO Token Guide](https://github.com/yt-dlp/yt-dlp/wiki/PO-Token-Guide)）
+**可能的解決方向：**
+- 使用住宅 IP 代理（residential proxy）（未驗證）
 - 在本機（非雲端 IP）執行
+- 改用 `--backend gemini`
+
+## 問題 6：PO token 無法取代 cookies
+
+`bgutil-ytdlp-pot-provider`（HTTP server 模式）+ deno 已能被 yt-dlp 偵測為可用 provider，但無 cookies 時仍在第一個 player request 回 `Sign in to confirm you're not a bot`。換到另一家 datacenter（DigitalOcean）出口結果相同。PO token 只有在 cookies 已通過 bot 偵測後才可能有用。
 
 ## 問題 4：youtube-transcript-api IP 封鎖（未解決）
 
@@ -79,7 +86,7 @@ RequestBlocked: YouTube is blocking requests from your IP.
 **根因：** `youtube-transcript-api` 的 HTTP 請求被 YouTube 基於 IP 封鎖，即使透過 `http_client` 參數傳入 cookies 也無法繞過。
 
 **可能的解決方向：**
-- 使用代理（`ProxyConfig` 參數）
+- 使用住宅代理（`ProxyConfig` 參數）；datacenter 出口（DigitalOcean SOCKS）同樣被封
 - 在本機執行
 
 ## 問題 5：字幕下載 429（部分解決）
@@ -98,8 +105,8 @@ ERROR: Unable to download video subtitles: HTTP Error 429: Too Many Requests
 
 ## 結論
 
-在雲端伺服器上，最可靠的方式是：
-
-1. **優先嘗試字幕路徑**（pipeline 已實作）— 不需要下載音訊
-2. **若字幕不可用，在本機執行** — 本機 IP 不受雲端 IP 限制
-3. **若必須在雲端執行，使用住宅代理** — 需額外設定
+| 執行環境 | 有字幕 | 無字幕 |
+|---|---|---|
+| 本機／住宅 IP | `--backend local`（原文字幕，免費） | `--backend local`（yt-dlp + Whisper） |
+| 雲端 IP | `--backend gemini` | `--backend gemini` |
+| 雲端 IP + 有效 cookies | 可試 `local`；Whisper 路徑可能仍卡問題 3 | 同左 |

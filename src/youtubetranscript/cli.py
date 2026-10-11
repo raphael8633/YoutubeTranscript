@@ -3,7 +3,7 @@
 import argparse
 import sys
 
-from youtubetranscript import pipeline
+from youtubetranscript import gemini, pipeline
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -36,6 +36,22 @@ def build_parser() -> argparse.ArgumentParser:
         default="base",
         help="Whisper model: tiny, base, small, medium, large (default: base)",
     )
+    parser.add_argument(
+        "--backend",
+        choices=pipeline.BACKENDS,
+        default="auto",
+        help=(
+            "Transcript source: auto = local captions/Whisper first, Gemini "
+            "fallback when blocked and GEMINI_API_KEY is set; local = "
+            "captions/Whisper only; gemini = Gemini only (default: auto)"
+        ),
+    )
+    parser.add_argument(
+        "--gemini-model",
+        metavar="MODEL",
+        default=gemini.DEFAULT_MODEL,
+        help=f"Gemini model for the gemini backend (default: {gemini.DEFAULT_MODEL})",
+    )
     return parser
 
 
@@ -49,6 +65,8 @@ def main(argv: list[str] | None = None) -> None:
             output=args.output,
             lang=args.lang,
             model=args.model,
+            backend=args.backend,
+            gemini_model=args.gemini_model,
         )
         print(f"Saved: {filepath}")
     except Exception as exc:  # noqa: BLE001

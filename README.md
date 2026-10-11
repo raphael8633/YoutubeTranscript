@@ -1,7 +1,8 @@
 # YoutubeTranscript
 
 CLI tool that takes a YouTube URL and saves a transcript to a `.txt` file.
-Works even when the video has no captions — falls back to local Whisper transcription.
+Works even when the video has no captions — falls back to local Whisper transcription,
+or to Gemini (which fetches the video server-side) when YouTube blocks the host IP.
 
 ## Quick start
 
@@ -15,11 +16,17 @@ uv run python main.py <youtube-url>
 
 ```
 uv run python main.py <url> [--timestamps] [--output FILE] [--lang CODE] [--model MODEL]
+                             [--backend auto|local|gemini] [--gemini-model NAME]
 
-  --timestamps     prefix each line with [MM:SS]
-  --output FILE    override output filename  (default: video title)
-  --lang CODE      e.g. en, es, fr           (default: auto-detect)
-  --model MODEL    tiny | base | small | medium | large  (default: base)
+  --timestamps         prefix each line with [MM:SS]
+  --output FILE        override output filename  (default: video title)
+  --lang CODE          e.g. en, es, zh-TW        (default: first available captions / auto-detect)
+  --model MODEL        Whisper size: tiny | base | small | medium | large  (default: base)
+  --backend            auto (default): local captions → Whisper; on any local failure,
+                         fall back to Gemini if GEMINI_API_KEY is set
+                       local:  never call Gemini
+                       gemini: skip yt-dlp / captions entirely (fastest on cloud servers)
+  --gemini-model NAME  default: gemini-2.5-flash
 ```
 
 **Example:**
@@ -28,6 +35,16 @@ uv run python main.py <url> [--timestamps] [--output FILE] [--lang CODE] [--mode
 uv run python main.py "https://youtube.com/watch?v=dQw4w9WgXcQ" --timestamps --model medium
 # saves: Rick Astley - Never Gonna Give You Up.txt
 ```
+
+## Backends
+
+| Path | Needs | Text source | When it works |
+|---|---|---|---|
+| captions (`youtube-transcript-api`) | nothing | YouTube's own captions, exact | home/residential IP |
+| Whisper (`yt-dlp` audio + `faster-whisper`) | CPU, model download | local ASR | home IP, or cloud IP with `YT_COOKIES` |
+| Gemini (`--backend gemini`) | `GEMINI_API_KEY` | Gemini ASR of the video, public videos only | anywhere, including blocked cloud IPs |
+
+Gemini cost scales with video length (~100 input tokens per second at low media resolution, ≈360k per hour). Long outputs that hit the model's token limit are resumed automatically from the last timestamp via clip offsets.
 
 ## YouTube authentication
 
@@ -42,7 +59,7 @@ To export cookies from your browser, use a browser extension like [Get cookies.t
 
 > **JS runtime:** yt-dlp works best with [deno](https://deno.land) installed (`curl -fsSL https://deno.land/install.sh | sh`).
 
-> **Cloud servers:** Running on AWS/GCP/Azure introduces additional YouTube restrictions. See [docs/cloud-ip-troubleshooting.md](docs/cloud-ip-troubleshooting.md) for known issues and workarounds.
+> **Cloud servers:** YouTube blocks datacenter IPs (OVH, DigitalOcean, AWS, …) for both captions and downloads. Use `--backend gemini` there, or run locally. See [docs/cloud-ip-troubleshooting.md](docs/cloud-ip-troubleshooting.md).
 
 ## New device setup
 
@@ -65,9 +82,10 @@ uv run pytest    # verify everything works
 
 ```
 src/youtubetranscript/
-  pipeline.py     # orchestrates all steps; stable public API
-  metadata.py     # fetch title + video_id via yt-dlp
+  pipeline.py     # orchestrates all steps + backend selection; stable public API
+  metadata.py     # title + video_id via yt-dlp; URL parsing + oEmbed title (no yt-dlp)
   captions.py     # fetch existing captions (youtube-transcript-api)
+  gemini.py       # transcribe a YouTube URL via Gemini REST (stdlib only)
   downloader.py   # download audio via yt-dlp  (used only when no captions)
   transcriber.py  # local transcription via faster-whisper
   formatter.py    # render segments as plain text or [MM:SS] timestamped
@@ -80,14 +98,19 @@ tests/            # unit tests, all modules mocked
 **Pipeline flow:**
 
 ```
-pipeline.run(url, timestamps, output, lang, model)
-  1. metadata.fetch(url)              → title, video_id
-  2. captions.fetch(video_id, lang)   → segments  (or None)
-  3. if None:
-       downloader.download(url)       → audio file  (temp, always cleaned up)
-       transcriber.transcribe(audio)  → segments
-  4. formatter.format(segments)       → string
-  5. writer.write(string, output)     → filepath
+pipeline.run(url, timestamps, output, lang, model, backend, gemini_model)
+  local path (backend auto|local):
+    1. metadata.fetch(url)              → title, video_id
+    2. captions.fetch(video_id, lang)   → segments  (or None)
+    3. if None:
+         downloader.download(url)       → audio file  (temp, always cleaned up)
+         transcriber.transcribe(audio)  → segments
+  gemini path (backend gemini, or auto after a local failure with GEMINI_API_KEY set):
+    1. metadata.parse_video_id(url) + metadata.fetch_oembed_title(id)
+    2. gemini.transcribe(canonical_url) → segments
+  then:
+    formatter.format(segments)          → string
+    writer.write(string, output)        → filepath
 ```
 
 ## Dependencies
@@ -97,6 +120,8 @@ pipeline.run(url, timestamps, output, lang, model)
 | `yt-dlp` | metadata + audio download |
 | `youtube-transcript-api` | fast caption fetch |
 | `faster-whisper` | local CPU transcription |
+
+Gemini and oEmbed calls use the standard library (`urllib`); no extra package.
 
 ## Tests
 
