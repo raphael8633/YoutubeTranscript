@@ -6,7 +6,7 @@ import re
 _INVALID_CHARS = re.compile(r'[<>:"/\\|?*\x00-\x1f]')
 
 
-def _sanitize(name: str) -> str:
+def sanitize_filename(name: str) -> str:
     """Replace characters that are invalid in file names."""
     return _INVALID_CHARS.sub("_", name).strip()
 
@@ -32,7 +32,7 @@ def write(text: str, output: str) -> str:
         name = output
     else:
         # Treat as a video title or relative name; sanitize all invalid chars.
-        name = _sanitize(output)
+        name = sanitize_filename(output)
 
     if not os.path.splitext(name)[1]:
         name += ".txt"

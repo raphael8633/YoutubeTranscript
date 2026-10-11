@@ -96,5 +96,7 @@ def run(
             title, segments = _gemini_segments(url, lang, gemini_model)
 
     text = formatter.format(segments, timestamps)
-    filepath = writer.write(text, output or title)
+    # Titles are remote input: flatten them so only a user-supplied --output
+    # can name a path outside the working directory.
+    filepath = writer.write(text, output or writer.sanitize_filename(title))
     return filepath

@@ -30,3 +30,9 @@ def test_write_appends_txt_extension_when_missing(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     result = write("text", "mytranscript")
     assert result.endswith(".txt")
+
+
+def test_sanitize_filename_flattens_path_separators():
+    from youtubetranscript.writer import sanitize_filename
+    assert sanitize_filename("/etc/cron.d/x") == "_etc_cron.d_x"
+    assert sanitize_filename("..\\..\\x") == ".._.._x"

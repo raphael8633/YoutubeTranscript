@@ -161,3 +161,29 @@ def test_backend_local_never_uses_gemini(monkeypatch):
         with pytest.raises(Exception, match="blocked"):
             pipeline.run(URL, backend="local")
         mock_gem.assert_not_called()
+
+
+# --- remote titles must not choose the output location ---------------------
+
+@pytest.mark.parametrize("backend", ["local", "gemini"])
+def test_pipeline_sanitizes_remote_title_into_plain_filename(backend):
+    """A video titled like an absolute path must not write outside the cwd."""
+    evil = {"title": "/home/ubuntu/.bashrc", "video_id": "dQw4w9WgXcQ"}
+    patches = _patch_all(meta=evil)
+    g_tr, g_title = _gemini_patches()
+    with patches[0], patches[1], patches[2], patches[3], \
+         patches[4], patches[5] as mock_wr, patches[6], patches[7], patches[8], \
+         g_tr, g_title as mock_title:
+        mock_title.return_value = evil["title"]
+        pipeline.run(URL, backend=backend)
+        name = mock_wr.call_args[0][1]
+        assert "/" not in name and not name.startswith(".")
+        assert name == "_home_ubuntu_.bashrc"
+
+
+def test_pipeline_keeps_user_supplied_absolute_output():
+    patches = _patch_all()
+    with patches[0], patches[1], patches[2], patches[3], \
+         patches[4], patches[5] as mock_wr, patches[6], patches[7], patches[8]:
+        pipeline.run(URL, output="/srv/out/t.txt")
+        mock_wr.assert_called_once_with("Hello", "/srv/out/t.txt")

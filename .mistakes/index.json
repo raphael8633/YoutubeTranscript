@@ -20,6 +20,40 @@
         "command": "Always remove the worktree BEFORE deleting the branch — git worktree remove <path>, then git branch -d <branch>."
       },
       "path": "M-001-git-worktree-cleanup-order.md"
+    },
+    {
+      "id": "M-002",
+      "title": "Tests inherit host GEMINI_API_KEY and hit the real Gemini API",
+      "severity": "hard",
+      "triggers": {
+        "keywords": [
+          "GEMINI_API_KEY exported in the host shell",
+          "auto backend falls back to Gemini in a test",
+          "test patches local path but not gemini.transcribe",
+          "DID NOT RAISE in pipeline failure test"
+        ]
+      },
+      "guard": {
+        "command": "Keep tests/conftest.py autouse fixture that delenv GEMINI_API_KEY; tests needing a key set a fake one via monkeypatch and patch gemini._post / gemini.transcribe."
+      },
+      "path": "M-002-tests-inherit-host-gemini-api-key-and-hit-the-real.md"
+    },
+    {
+      "id": "M-003",
+      "title": "Remote video title used as output path allows arbitrary file write",
+      "severity": "hard",
+      "triggers": {
+        "keywords": [
+          "writer.write(text, output or title)",
+          "os.path.isabs trusted for video title",
+          "oEmbed / yt-dlp title chooses output filename",
+          "new title source added to pipeline"
+        ]
+      },
+      "guard": {
+        "command": "Pass remote titles through writer.sanitize_filename before writer.write; only a user-supplied --output may be an absolute path."
+      },
+      "path": "M-003-remote-video-title-used-as-output-path-allows-arbi.md"
     }
   ]
 }
