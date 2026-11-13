@@ -10,7 +10,10 @@ import re
 import urllib.parse
 import urllib.request
 
-import yt_dlp
+try:
+    import yt_dlp  # optional extra "local"; absent on cloud hosts
+except ImportError:
+    yt_dlp = None
 
 _ID = re.compile(r"^[A-Za-z0-9_-]{11}$")
 _YOUTUBE_HOSTS = {"youtube.com", "www.youtube.com", "m.youtube.com", "music.youtube.com"}

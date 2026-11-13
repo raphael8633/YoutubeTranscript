@@ -3,6 +3,13 @@ from unittest.mock import patch, MagicMock, call
 from youtubetranscript import pipeline
 
 
+@pytest.fixture(autouse=True)
+def _local_extra_installed(monkeypatch):
+    # The orchestration tests mock every local step; whether the extra is installed on
+    # this host is a separate case (tests at the end of this file).
+    monkeypatch.setattr(pipeline, "local_available", lambda: True)
+
+
 URL = "https://youtube.com/watch?v=dQw4w9WgXcQ"
 SEGMENTS = [{"text": "Hello", "start": 0.0}]
 METADATA = {"title": "Rick Roll", "video_id": "dQw4w9WgXcQ"}
@@ -187,3 +194,38 @@ def test_pipeline_keeps_user_supplied_absolute_output():
          patches[4], patches[5] as mock_wr, patches[6], patches[7], patches[8]:
         pipeline.run(URL, output="/srv/out/t.txt")
         mock_wr.assert_called_once_with("Hello", "/srv/out/t.txt")
+
+
+# --- local extra not installed (cloud host: only the Gemini path) ----------
+
+def test_auto_goes_straight_to_gemini_when_local_extra_missing(monkeypatch, capsys):
+    monkeypatch.setenv("GEMINI_API_KEY", "k")
+    patches = _patch_all()
+    g_tr, g_title = _gemini_patches()
+    with patch("youtubetranscript.pipeline.local_available", return_value=False), \
+         patches[0] as mock_meta, patches[1], patches[2], patches[3], patches[4], patches[5], \
+         patches[6], patches[7], patches[8], g_tr as mock_gem, g_title:
+        pipeline.run(URL)
+        mock_meta.assert_not_called()
+        mock_gem.assert_called_once()
+    assert "local path failed" not in capsys.readouterr().err
+
+
+def test_local_backend_without_extra_says_how_to_install():
+    with patch("youtubetranscript.pipeline.local_available", return_value=False):
+        with pytest.raises(RuntimeError, match="--extra local"):
+            pipeline.run(URL, backend="local")
+
+
+def test_pipeline_imports_without_local_dependencies():
+    import subprocess, sys, textwrap
+    code = textwrap.dedent("""
+        import sys
+        for name in ("yt_dlp", "faster_whisper", "youtube_transcript_api"):
+            sys.modules[name] = None  # import of a None entry raises ImportError
+        from youtubetranscript import pipeline, cli
+        assert pipeline.local_available() is False
+    """)
+    proc = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True,
+                          env={**__import__("os").environ, "PYTHONPATH": "src"})
+    assert proc.returncode == 0, proc.stderr

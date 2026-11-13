@@ -1,7 +1,10 @@
 """Download audio from a YouTube URL via yt-dlp."""
 
 import os
-import yt_dlp
+try:
+    import yt_dlp  # optional extra "local"; absent on cloud hosts
+except ImportError:
+    yt_dlp = None
 
 
 def download(url: str, tmp_dir: str) -> str:

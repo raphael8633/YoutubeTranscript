@@ -1,5 +1,6 @@
 import pytest
 from unittest.mock import patch, MagicMock
+pytest.importorskip("faster_whisper")  # optional extra "local"
 from youtubetranscript.transcriber import transcribe
 
 

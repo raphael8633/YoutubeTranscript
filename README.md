@@ -1,14 +1,20 @@
 # YoutubeTranscript
 
 CLI tool that takes a YouTube URL and saves a transcript to a `.txt` file.
-Works even when the video has no captions — falls back to local Whisper transcription,
-or to Gemini (which fetches the video server-side) when YouTube blocks the host IP.
+
+- **Gemini path (default install)**: Gemini fetches the video server-side, so it works from
+  cloud IPs that YouTube blocks. Needs `GEMINI_API_KEY`. This is the only path installed on the VPS.
+- **Local path (optional extra `local`)**: existing captions, else yt-dlp audio + faster-whisper.
+  Works from home/residential IPs; on cloud IPs YouTube's bot check blocks all three steps.
+  Install with `uv sync --extra local`.
+
+With the default install, `--backend auto` goes straight to Gemini.
 
 ## Quick start
 
 ```bash
 # requires: Python 3.12+, uv
-uv sync                            # installs dependencies + package (editable)
+uv sync                            # Gemini path only; add --extra local for captions/Whisper
 uv run python main.py <youtube-url>
 ```
 
@@ -22,9 +28,9 @@ uv run python main.py <url> [--timestamps] [--output FILE] [--lang CODE] [--mode
   --output FILE        override output filename  (default: video title)
   --lang CODE          e.g. en, es, zh-TW        (default: first available captions / auto-detect)
   --model MODEL        Whisper size: tiny | base | small | medium | large  (default: base)
-  --backend            auto (default): local captions → Whisper; on any local failure,
-                         fall back to Gemini if GEMINI_API_KEY is set
-                       local:  never call Gemini
+  --backend            auto (default): with the local extra, captions → Whisper and on any
+                         local failure Gemini if GEMINI_API_KEY is set; without it, Gemini
+                       local:  never call Gemini (needs the local extra)
                        gemini: skip yt-dlp / captions entirely (fastest on cloud servers)
   --gemini-model NAME  default: gemini-2.5-flash
 ```
@@ -71,8 +77,8 @@ cd YoutubeTranscript
 # Windows:  powershell -c "irm https://astral.sh/uv/install.ps1 | iex"
 # macOS/Linux: curl -LsSf https://astral.sh/uv/install.sh | sh
 
-uv sync          # installs Python 3.12 + all dependencies
-uv run pytest    # verify everything works
+uv sync --extra local   # installs Python 3.12 + all paths (home machine)
+uv run pytest           # without the extra, local-path module tests are skipped
 ```
 
 > `faster-whisper` downloads Whisper model weights on first use (~150 MB for `base`).

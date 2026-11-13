@@ -10,6 +10,11 @@ from youtubetranscript import metadata, captions, downloader, transcriber, forma
 BACKENDS = ("auto", "local", "gemini")
 
 
+def local_available() -> bool:
+    """True when the optional ``local`` extra (yt-dlp, captions, Whisper) is installed."""
+    return None not in (metadata.yt_dlp, captions.YouTubeTranscriptApi, transcriber.WhisperModel)
+
+
 def _local_segments(url: str, lang: str | None, model: str) -> tuple[str, list[dict]]:
     """Return ``(title, segments)`` from captions, or local Whisper transcription."""
     meta = metadata.fetch(url)
@@ -55,8 +60,9 @@ def run(
          - ``local``: fetch metadata via yt-dlp, try existing captions, else
            download audio and transcribe with Whisper.
          - ``gemini``: resolve the title via oEmbed and transcribe with Gemini.
-         - ``auto``: try ``local``; if it raises and ``GEMINI_API_KEY`` is
-           set, fall back to ``gemini``, otherwise re-raise.
+         - ``auto``: without the ``local`` extra, ``gemini``. With it, try
+           ``local``; if it raises and ``GEMINI_API_KEY`` is set, fall back to
+           ``gemini``, otherwise re-raise.
       2. Format the segments.
       3. Write the result to a file.
 
@@ -81,7 +87,11 @@ def run(
     if backend == "gemini":
         title, segments = _gemini_segments(url, lang, gemini_model)
     elif backend == "local":
+        if not local_available():
+            raise RuntimeError("local backend needs the optional extra: uv sync --extra local")
         title, segments = _local_segments(url, lang, model)
+    elif not local_available():
+        title, segments = _gemini_segments(url, lang, gemini_model)
     else:
         try:
             title, segments = _local_segments(url, lang, model)

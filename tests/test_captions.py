@@ -1,5 +1,6 @@
 import pytest
 from unittest.mock import patch, MagicMock
+pytest.importorskip("youtube_transcript_api")  # optional extra "local"
 from youtubetranscript.captions import fetch
 
 

@@ -1,6 +1,9 @@
 import pytest
 from unittest.mock import patch, MagicMock
+from youtubetranscript import metadata
 from youtubetranscript.metadata import fetch
+
+needs_ytdlp = pytest.mark.skipif(metadata.yt_dlp is None, reason="optional extra \"local\" not installed")
 
 
 def _make_ydl(info: dict):
@@ -12,6 +15,7 @@ def _make_ydl(info: dict):
     return ydl
 
 
+@needs_ytdlp
 @patch("youtubetranscript.metadata.yt_dlp.YoutubeDL")
 def test_fetch_returns_title_and_id(mock_ydl_cls):
     mock_ydl_cls.return_value = _make_ydl(
@@ -21,6 +25,7 @@ def test_fetch_returns_title_and_id(mock_ydl_cls):
     assert result == {"title": "Rick Roll", "video_id": "dQw4w9WgXcQ"}
 
 
+@needs_ytdlp
 @patch("youtubetranscript.metadata.yt_dlp.YoutubeDL")
 def test_fetch_raises_on_extraction_failure(mock_ydl_cls):
     ydl = _make_ydl({})
@@ -30,6 +35,7 @@ def test_fetch_raises_on_extraction_failure(mock_ydl_cls):
         fetch("https://youtube.com/watch?v=bad")
 
 
+@needs_ytdlp
 @patch("youtubetranscript.metadata.yt_dlp.YoutubeDL")
 def test_fetch_uses_cookiefile_from_env(mock_ydl_cls, monkeypatch):
     """When YT_COOKIES is set, yt-dlp opts should include cookiefile."""
@@ -44,6 +50,7 @@ def test_fetch_uses_cookiefile_from_env(mock_ydl_cls, monkeypatch):
     assert call_opts["cookiefile"] == "/tmp/cookies.txt"
 
 
+@needs_ytdlp
 @patch("youtubetranscript.metadata.yt_dlp.YoutubeDL")
 def test_fetch_no_cookiefile_without_env(mock_ydl_cls, monkeypatch):
     """When YT_COOKIES is not set, cookiefile should not appear in opts."""

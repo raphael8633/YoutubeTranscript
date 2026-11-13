@@ -2,7 +2,12 @@
 name = "youtubetranscript"
 version = "0.1.0"
 requires-python = ">=3.12"
-dependencies = [
+dependencies = []
+
+[project.optional-dependencies]
+# Captions, yt-dlp audio download and Whisper. YouTube's bot check blocks these from
+# cloud IPs, so a VPS installs without them and uses the Gemini backend only.
+local = [
     "faster-whisper>=1.2.1",
     "youtube-transcript-api>=1.2.4",
     "yt-dlp>=2026.2.4",

@@ -1,7 +1,10 @@
 """Fetch existing YouTube captions via youtube-transcript-api."""
 
-from youtube_transcript_api import YouTubeTranscriptApi
-from youtube_transcript_api._errors import NoTranscriptFound, TranscriptsDisabled
+try:
+    from youtube_transcript_api import YouTubeTranscriptApi  # optional extra "local"; absent on cloud hosts
+    from youtube_transcript_api._errors import NoTranscriptFound, TranscriptsDisabled
+except ImportError:
+    YouTubeTranscriptApi = NoTranscriptFound = TranscriptsDisabled = None
 
 
 def fetch(video_id: str, lang: str | None) -> list[dict] | None:

@@ -1,6 +1,9 @@
 """Transcribe an audio file locally using faster-whisper."""
 
-from faster_whisper import WhisperModel
+try:
+    from faster_whisper import WhisperModel  # optional extra "local"; absent on cloud hosts
+except ImportError:
+    WhisperModel = None
 
 
 def transcribe(audio_file: str, lang: str | None, model: str = "base") -> list[dict]:

@@ -1,6 +1,7 @@
 import os
 import pytest
 from unittest.mock import patch, MagicMock
+pytest.importorskip("yt_dlp")  # optional extra "local"
 from youtubetranscript.downloader import download
 
 
