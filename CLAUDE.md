@@ -1,9 +1,5 @@
 # CLAUDE.md — PROJECT RULES
 
-## Entry Point
-
-`/raph-core` is enforced via raph-power plugin hook (UserPromptSubmit) — no manual reminder needed.
-
 ## Quick Commands
 
 - **test:** `unset VIRTUAL_ENV && uv run pytest`
